@@ -1,0 +1,378 @@
+{
+  "name": "Dev Links – Sync Category Buttons",
+  "nodes": [
+    {
+      "id": "5c000001-0000-4000-8000-000000000001",
+      "name": "Daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "5c000001-0000-4000-8000-000000000002",
+      "name": "From /sync",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "5c000001-0000-4000-8000-000000000003",
+      "name": "Get Categories",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        100
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.notion.com/v1/databases/YOUR_NOTION_DATABASE_ID",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Notion-Version",
+              "value": "2022-06-28"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "notionApi": {
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "id": "5c000001-0000-4000-8000-000000000004",
+      "name": "Get Dev Links",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        100
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://localhost:5678/api/v1/workflows/YOUR_DEV_LINKS_WORKFLOW_ID",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "options": {}
+      },
+      "credentials": {
+        "n8nApi": {
+          "name": "n8n API (local)"
+        }
+      }
+    },
+    {
+      "id": "5c000001-0000-4000-8000-000000000005",
+      "name": "Build Buttons",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        100
+      ],
+      "parameters": {
+        "jsCode": "const manual = $('From /sync').isExecuted;\nconst cats = ($('Get Categories').first().json.properties?.Category?.select?.options || []).map(o => o.name);\nif (!cats.length) throw new Error('No Category options were read from Notion');\n\nconst wf = $input.first().json;\nconst node = wf.nodes.find(n => n.name === 'Send a text message');\nif (!node) throw new Error('\"Send a text message\" node not found in Dev Links');\n\n// Telegram callback data max 64 bytes; \"c|\" + 32-char page id + \"|\" uses 35\nconst bytes = s => unescape(encodeURIComponent(s)).length;\nconst usable = cats.filter(c => bytes(c) <= 29);\nconst skipped = cats.filter(c => bytes(c) > 29);\n\nconst current = (node.parameters.inlineKeyboard?.rows || []).map(r => r.row?.buttons?.[0]?.text);\nconst changed = JSON.stringify(current) !== JSON.stringify(usable) || node.parameters.replyMarkup !== 'inlineKeyboard';\n\nif (changed) {\n  node.parameters.replyMarkup = 'inlineKeyboard';\n  node.parameters.inlineKeyboard = {\n    rows: usable.map(c => ({\n      row: { buttons: [{ text: c, additionalFields: { callback_data: `=c|{{ $json.id.replace(/-/g, '') }}|${c}` } }] }\n    }))\n  };\n}\n\nconst s = wf.settings || {};\nconst settings = {};\nfor (const k of ['executionOrder', 'errorWorkflow', 'callerPolicy', 'saveDataErrorExecution', 'saveDataSuccessExecution', 'saveManualExecutions', 'saveExecutionProgress', 'executionTimeout', 'timezone']) {\n  if (s[k] !== undefined) settings[k] = s[k];\n}\n\nconst warning = skipped.length ? `\\n⚠️ Too long for a button (max 29 characters): ${skipped.join(', ')}` : '';\nreturn [{ json: { changed, manual, usable, warning, body: { name: wf.name, nodes: wf.nodes, connections: wf.connections, settings } } }];"
+      }
+    },
+    {
+      "id": "5c000001-0000-4000-8000-000000000006",
+      "name": "Changed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        900,
+        100
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "changed",
+              "leftValue": "={{ $json.changed }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5c000001-0000-4000-8000-000000000007",
+      "name": "Save Dev Links",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "method": "PUT",
+        "url": "http://localhost:5678/api/v1/workflows/YOUR_DEV_LINKS_WORKFLOW_ID",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {}
+      },
+      "credentials": {
+        "n8nApi": {
+          "name": "n8n API (local)"
+        }
+      }
+    },
+    {
+      "id": "5c000001-0000-4000-8000-000000000008",
+      "name": "Publish Dev Links",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/api/v1/workflows/YOUR_DEV_LINKS_WORKFLOW_ID/activate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "options": {}
+      },
+      "credentials": {
+        "n8nApi": {
+          "name": "n8n API (local)"
+        }
+      }
+    },
+    {
+      "id": "5c000001-0000-4000-8000-000000000009",
+      "name": "Notify Updated",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1560,
+        0
+      ],
+      "webhookId": "5c000001-0000-4000-8000-0000000000a1",
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=🔄 Category buttons updated\n{{ $('Build Buttons').item.json.usable.join(', ') }}{{ $('Build Buttons').item.json.warning }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "id": "5c000001-0000-4000-8000-000000000010",
+      "name": "Manual?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        220
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "manual",
+              "leftValue": "={{ $json.manual }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5c000001-0000-4000-8000-000000000011",
+      "name": "Notify No Change",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1340,
+        220
+      ],
+      "webhookId": "5c000001-0000-4000-8000-0000000000a2",
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=✅ Category buttons already match Notion\n{{ $json.usable.join(', ') }}{{ $json.warning }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily": {
+      "main": [
+        [
+          {
+            "node": "Get Categories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "From /sync": {
+      "main": [
+        [
+          {
+            "node": "Get Categories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Categories": {
+      "main": [
+        [
+          {
+            "node": "Get Dev Links",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Dev Links": {
+      "main": [
+        [
+          {
+            "node": "Build Buttons",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Buttons": {
+      "main": [
+        [
+          {
+            "node": "Changed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Changed?": {
+      "main": [
+        [
+          {
+            "node": "Save Dev Links",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Manual?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Dev Links": {
+      "main": [
+        [
+          {
+            "node": "Publish Dev Links",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish Dev Links": {
+      "main": [
+        [
+          {
+            "node": "Notify Updated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual?": {
+      "main": [
+        [
+          {
+            "node": "Notify No Change",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  }
+}

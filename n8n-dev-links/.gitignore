@@ -1,0 +1,6 @@
+.env
+*.env
+.n8n/
+*.local.json
+node_modules/
+.claude/

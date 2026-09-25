@@ -1,0 +1,54 @@
+{
+  "name": "Dev Links – Error Alert",
+  "nodes": [
+    {
+      "id": "e1a1c0de-0001-4000-8000-000000000001",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "e1a1c0de-0002-4000-8000-000000000002",
+      "name": "Alert via Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=🚨 {{ $json.workflow.name }} crashed\n🧩 Step: {{ $json.execution.lastNodeExecuted ?? 'unknown' }}\n⚠️ {{ String($json.execution.error?.message ?? 'Unknown error').slice(0, 300) }}\n🔎 Execution {{ $json.execution.id ?? '' }}",
+        "additionalFields": {}
+      },
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Alert via Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  }
+}
