@@ -1,0 +1,21 @@
+# n8n for Dev Links. Same settings as the original `docker run` command.
+#   Start / apply changes:  docker compose up -d
+#   Update n8n:             docker compose pull && docker compose up -d
+#   Logs:                   docker compose logs -f n8n
+# Values come from .env (copy .env.example to .env and fill it in).
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: dev-links-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      # Public URL that n8n registers with Telegram (Tailscale Funnel)
+      - WEBHOOK_URL=${WEBHOOK_URL:?Set WEBHOOK_URL in .env}
+      # Requests arrive through one proxy (Tailscale Funnel)
+      - N8N_PROXY_HOPS=1
+    volumes:
+      # Workflows, credentials and execution history live here, on the host
+      - ${N8N_DATA_DIR:-~/.n8n}:/home/node/.n8n

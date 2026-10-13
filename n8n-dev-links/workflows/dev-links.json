@@ -125,6 +125,54 @@
               "row": {
                 "buttons": [
                   {
+                    "text": "Learning",
+                    "additionalFields": {
+                      "callback_data": "=c|{{ $json.id.replace(/-/g, '') }}|Learning"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Certifications",
+                    "additionalFields": {
+                      "callback_data": "=c|{{ $json.id.replace(/-/g, '') }}|Certifications"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Claude",
+                    "additionalFields": {
+                      "callback_data": "=c|{{ $json.id.replace(/-/g, '') }}|Claude"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Job Search",
+                    "additionalFields": {
+                      "callback_data": "=c|{{ $json.id.replace(/-/g, '') }}|Job Search"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
                     "text": "System Design",
                     "additionalFields": {
                       "callback_data": "=c|{{ $json.id.replace(/-/g, '') }}|System Design"
@@ -236,18 +284,6 @@
                     "text": "AI Slop Checks",
                     "additionalFields": {
                       "callback_data": "=c|{{ $json.id.replace(/-/g, '') }}|AI Slop Checks"
-                    }
-                  }
-                ]
-              }
-            },
-            {
-              "row": {
-                "buttons": [
-                  {
-                    "text": "OpenClaw",
-                    "additionalFields": {
-                      "callback_data": "=c|{{ $json.id.replace(/-/g, '') }}|OpenClaw"
                     }
                   }
                 ]

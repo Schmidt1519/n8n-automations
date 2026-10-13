@@ -109,14 +109,11 @@ Category names must be 29 characters or fewer to fit Telegram's 64-byte `callbac
 ## Setup
 
 ### 1. Run n8n in Docker
+Copy `.env.example` to `.env`, set `WEBHOOK_URL` to your Funnel URL (step 2), then start n8n with [`docker-compose.yml`](docker-compose.yml):
 ```bash
-docker run -d --name dev-links-n8n --restart unless-stopped \
-  -p 5678:5678 \
-  -v ~/.n8n:/home/node/.n8n \
-  -e WEBHOOK_URL=https://<machine>.<tailnet>.ts.net/ \
-  -e N8N_PROXY_HOPS=1 \
-  n8nio/n8n
+docker compose up -d
 ```
+n8n's data (workflows, credentials, executions) is stored on the host in `~/.n8n`, so the container can be recreated without losing anything. To update n8n, run `docker compose pull && docker compose up -d`.
 
 ### 2. Expose only the webhook path with Tailscale Funnel
 Enable MagicDNS, HTTPS certificates and Funnel for your tailnet, then run:
